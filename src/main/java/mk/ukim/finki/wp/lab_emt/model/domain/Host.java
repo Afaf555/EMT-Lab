@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 
 @Table(name="hosts")
-public class Host {
+public class Host  extends BaseAuditableEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
