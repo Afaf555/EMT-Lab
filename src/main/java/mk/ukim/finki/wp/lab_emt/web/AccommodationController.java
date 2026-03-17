@@ -28,40 +28,34 @@ public class AccommodationController {
 
     @GetMapping("/{id}")
     public ResponseEntity<AccommodationResponseDto> findById(@PathVariable Long id) {
-        return accommodationService.findById(id)
-                .map(AccommodationResponseDto::from)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.ok(
+                AccommodationResponseDto.from(accommodationService.findById(id)));
     }
 
     @PostMapping("/add")
     public ResponseEntity<AccommodationResponseDto> create(
             @RequestBody @Valid AccommodationRequestDto dto) {
-        return ResponseEntity.ok(AccommodationResponseDto
-                .from(accommodationService.create(dto)));
+        return ResponseEntity.ok(
+                AccommodationResponseDto.from(accommodationService.create(dto)));
     }
 
     @PutMapping("/{id}/edit")
     public ResponseEntity<AccommodationResponseDto> update(
             @PathVariable Long id,
             @RequestBody @Valid AccommodationRequestDto dto) {
-        return accommodationService.update(id, dto)
-                .map(AccommodationResponseDto::from)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.ok(
+                AccommodationResponseDto.from(accommodationService.update(id, dto)));
     }
 
     @DeleteMapping("/{id}/delete")
-    public ResponseEntity<AccommodationResponseDto> deleteById(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteById(@PathVariable Long id) {
         accommodationService.deleteById(id);
         return ResponseEntity.ok().build();
     }
 
     @PatchMapping("/{id}/rent")
     public ResponseEntity<AccommodationResponseDto> markAsRented(@PathVariable Long id) {
-        return accommodationService.markAsRented(id)
-                .map(AccommodationResponseDto::from)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.ok(
+                AccommodationResponseDto.from(accommodationService.markAsRented(id)));
     }
 }
