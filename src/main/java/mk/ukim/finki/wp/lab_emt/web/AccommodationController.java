@@ -2,9 +2,14 @@ package mk.ukim.finki.wp.lab_emt.web;
 
 import jakarta.validation.Valid;
 import java.util.List;
+
+import mk.ukim.finki.wp.lab_emt.model.domain.Category;
 import mk.ukim.finki.wp.lab_emt.model.dto.AccommodationRequestDto;
 import mk.ukim.finki.wp.lab_emt.model.dto.AccommodationResponseDto;
+import mk.ukim.finki.wp.lab_emt.model.projection.AccommodationDetailsProjection;
+import mk.ukim.finki.wp.lab_emt.model.projection.AccommodationShortProjection;
 import mk.ukim.finki.wp.lab_emt.service.AccommodationService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,5 +62,36 @@ public class AccommodationController {
     public ResponseEntity<AccommodationResponseDto> markAsRented(@PathVariable Long id) {
         return ResponseEntity.ok(
                 AccommodationResponseDto.from(accommodationService.markAsRented(id)));
+    }
+    @GetMapping("/paged")
+    public ResponseEntity<Page<AccommodationResponseDto>> findAllPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "name") String sortBy,
+            @RequestParam(required = false) Category category,
+            @RequestParam(required = false) Long hostId,
+            @RequestParam(required = false) Long countryId,
+            @RequestParam(required = false) Integer minRooms,
+            @RequestParam(required = false) Boolean hasAvailableRooms
+    ) {
+        return ResponseEntity.ok(
+                accommodationService.findAll(
+                        page, size, sortBy,
+                        category, hostId, countryId,
+                        minRooms, hasAvailableRooms));
+    }
+
+    @GetMapping("/short")
+    public ResponseEntity<List<AccommodationShortProjection>> findAllShort() {
+        return ResponseEntity.ok(accommodationService.findAllShort());
+    }
+
+    @GetMapping("/details")
+    public ResponseEntity<List<AccommodationDetailsProjection>> findAllDetails() {
+        return ResponseEntity.ok(accommodationService.findAllDetails());
+    }
+    @GetMapping("/with-host-country")
+    public ResponseEntity<List<AccommodationResponseDto>> findAllWithHostAndCountry() {
+        return ResponseEntity.ok(accommodationService.findAllWithHostAndCountry());
     }
 }

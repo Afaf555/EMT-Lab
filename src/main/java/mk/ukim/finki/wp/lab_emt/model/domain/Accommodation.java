@@ -14,6 +14,20 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "accommodations")
 @AllArgsConstructor
+@NamedEntityGraph(
+        name = "Accommodation.hostAndCountry",
+        attributeNodes = {
+                @NamedAttributeNode(value = "host", subgraph = "host-subgraph")
+        },
+        subgraphs = {
+                @NamedSubgraph(
+                        name = "host-subgraph",
+                        attributeNodes = {
+                                @NamedAttributeNode("country")
+                        }
+                )
+        }
+)
 public class Accommodation extends BaseAuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
