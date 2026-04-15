@@ -6,6 +6,7 @@ import java.util.List;
 import mk.ukim.finki.wp.lab_emt.model.domain.Category;
 import mk.ukim.finki.wp.lab_emt.model.dto.AccommodationRequestDto;
 import mk.ukim.finki.wp.lab_emt.model.dto.AccommodationResponseDto;
+import mk.ukim.finki.wp.lab_emt.model.dto.HostStatsDto;
 import mk.ukim.finki.wp.lab_emt.model.projection.AccommodationDetailsProjection;
 import mk.ukim.finki.wp.lab_emt.model.projection.AccommodationShortProjection;
 import mk.ukim.finki.wp.lab_emt.service.AccommodationService;
@@ -93,5 +94,14 @@ public class AccommodationController {
     @GetMapping("/with-host-country")
     public ResponseEntity<List<AccommodationResponseDto>> findAllWithHostAndCountry() {
         return ResponseEntity.ok(accommodationService.findAllWithHostAndCountry());
+    }
+    @GetMapping("/most-popular")
+    public ResponseEntity<List<AccommodationResponseDto>> findMostPopular() {
+        return ResponseEntity.ok(accommodationService.findMostPopular());
+    }
+
+    @GetMapping("/most-popular-hosts")
+    public ResponseEntity<List<HostStatsDto>> findMostPopularHosts() {
+        return ResponseEntity.ok(accommodationService.findMostPopularHosts());
     }
 }

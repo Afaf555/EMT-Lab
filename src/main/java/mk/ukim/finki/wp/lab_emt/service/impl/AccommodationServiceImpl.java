@@ -9,32 +9,40 @@ import mk.ukim.finki.wp.lab_emt.model.domain.Host;
 import mk.ukim.finki.wp.lab_emt.model.dto.AccommodationRequestDto;
 import mk.ukim.finki.wp.lab_emt.model.dto.AccommodationResponseDto;
 import mk.ukim.finki.wp.lab_emt.model.dto.AccommodationSpecification;
+import mk.ukim.finki.wp.lab_emt.model.dto.HostStatsDto;
 import mk.ukim.finki.wp.lab_emt.model.exception.AccommodationNotFoundException;
 import mk.ukim.finki.wp.lab_emt.model.exception.HostNotFoundException;
 import mk.ukim.finki.wp.lab_emt.model.projection.AccommodationDetailsProjection;
 import mk.ukim.finki.wp.lab_emt.model.projection.AccommodationShortProjection;
 import mk.ukim.finki.wp.lab_emt.repository.AccommodationRepository;
 import mk.ukim.finki.wp.lab_emt.repository.HostRepository;
+import mk.ukim.finki.wp.lab_emt.repository.ReservationRepository;
 import mk.ukim.finki.wp.lab_emt.service.AccommodationService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AccommodationServiceImpl implements AccommodationService {
 
     private final AccommodationRepository accommodationRepository;
     private final HostRepository hostRepository;
-    private final ApplicationEventPublisher applicationEventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ReservationRepository reservationRepository;
+
     public AccommodationServiceImpl(AccommodationRepository accommodationRepository,
-                                    HostRepository hostRepository, ApplicationEventPublisher applicationEventPublisher) {
+                                    HostRepository hostRepository,
+                                    ApplicationEventPublisher eventPublisher,
+                                    ReservationRepository reservationRepository) {
         this.accommodationRepository = accommodationRepository;
         this.hostRepository = hostRepository;
-        this.applicationEventPublisher = applicationEventPublisher;
+        this.eventPublisher = eventPublisher;
+        this.reservationRepository = reservationRepository;
     }
-
     @Override
     public List<Accommodation> findAll() {
         return accommodationRepository.findAll();
@@ -87,7 +95,7 @@ public class AccommodationServiceImpl implements AccommodationService {
 
         Accommodation saved = accommodationRepository.save(accommodation);
 
-        applicationEventPublisher.publishEvent(new AccommodationRentedEvent(saved));
+        eventPublisher.publishEvent(new AccommodationRentedEvent(saved));
 
         return saved;
     }
@@ -113,6 +121,7 @@ public class AccommodationServiceImpl implements AccommodationService {
 
         return new PageImpl<>(filtered, pageable, filtered.size());
     }
+
     @Override
     public List<AccommodationShortProjection> findAllShort() {
         return accommodationRepository.findAllProjectedBy();
@@ -128,6 +137,58 @@ public class AccommodationServiceImpl implements AccommodationService {
         return accommodationRepository.findAll()
                 .stream()
                 .map(AccommodationResponseDto::from)
-                .toList();    }
+                .toList();
+    }
+    @Override
+    public List<AccommodationResponseDto> findMostPopular() {
+        return accommodationRepository.findAll()
+                .stream()
+                .sorted((a1, a2) -> {
+                    long rooms1 = reservationRepository.findAllByAccommodationId(a1.getId())
+                            .stream()
+                            .mapToLong(r -> r.getNumRentedRooms())
+                            .sum();
+                    long rooms2 = reservationRepository.findAllByAccommodationId(a2.getId())
+                            .stream()
+                            .mapToLong(r -> r.getNumRentedRooms())
+                            .sum();
+                    return Long.compare(rooms2, rooms1);
+                })
+                .map(AccommodationResponseDto::from)
+                .toList();
+    }
+    @Override
+    public List<HostStatsDto> findMostPopularHosts() {
+        return hostRepository.findAll()
+                .stream()
+                .map(host -> {
+                    List<Accommodation> hostAccommodations = accommodationRepository
+                            .findAllByHostId(host.getId());
 
+                    long totalAccommodations = hostAccommodations.size();
+
+                    long goodAccommodations = hostAccommodations.stream()
+                            .filter(a -> a.getCondition() == Condition.GOOD)
+                            .count();
+
+                    long badAccommodations = hostAccommodations.stream()
+                            .filter(a -> a.getCondition() == Condition.BAD)
+                            .count();
+
+                    long rentedRooms = hostAccommodations.stream()
+                            .flatMap(a -> reservationRepository
+                                    .findAllByAccommodationId(a.getId()).stream())
+                            .mapToLong(r -> r.getNumRentedRooms())
+                            .sum();
+
+                    return new HostStatsDto(
+                            host.getId(),
+                            totalAccommodations,
+                            new HostStatsDto.ConditionsDto(goodAccommodations, badAccommodations),
+                            rentedRooms
+                    );
+                })
+                .sorted((h1, h2) -> Long.compare(h2.rentedRooms(), h1.rentedRooms()))
+                .toList();
+    }
 }

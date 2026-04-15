@@ -23,5 +23,6 @@ public interface AccommodationRepository extends JpaRepository<Accommodation, Lo
     List<AccommodationDetailsProjection> findAllDetailedProjectedBy();
     @EntityGraph(value = "Accommodation.hostAndCountry")
     List<Accommodation> findAll();
+    List<Accommodation> findAllByIsRentedTrueOrderByNumRoomsDesc();
 
 }

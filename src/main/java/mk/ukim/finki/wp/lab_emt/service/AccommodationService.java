@@ -4,6 +4,7 @@ import mk.ukim.finki.wp.lab_emt.model.domain.Accommodation;
 import mk.ukim.finki.wp.lab_emt.model.domain.Category;
 import mk.ukim.finki.wp.lab_emt.model.dto.AccommodationRequestDto;
 import mk.ukim.finki.wp.lab_emt.model.dto.AccommodationResponseDto;
+import mk.ukim.finki.wp.lab_emt.model.dto.HostStatsDto;
 import mk.ukim.finki.wp.lab_emt.model.projection.AccommodationDetailsProjection;
 import mk.ukim.finki.wp.lab_emt.model.projection.AccommodationShortProjection;
 import org.springframework.data.domain.Page;
@@ -31,4 +32,6 @@ public interface AccommodationService {
     List<AccommodationShortProjection> findAllShort();
     List<AccommodationDetailsProjection> findAllDetails();
     List<AccommodationResponseDto> findAllWithHostAndCountry();
+    List<AccommodationResponseDto> findMostPopular();
+    List<HostStatsDto> findMostPopularHosts();
 }
