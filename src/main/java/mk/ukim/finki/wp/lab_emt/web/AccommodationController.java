@@ -104,4 +104,5 @@ public class AccommodationController {
     public ResponseEntity<List<HostStatsDto>> findMostPopularHosts() {
         return ResponseEntity.ok(accommodationService.findMostPopularHosts());
     }
+
 }
