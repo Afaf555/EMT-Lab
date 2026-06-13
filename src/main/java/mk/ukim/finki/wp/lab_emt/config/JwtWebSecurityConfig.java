@@ -1,18 +1,18 @@
 package mk.ukim.finki.wp.lab_emt.config;
 
-import mk.ukim.finki.wp.lab_emt.web.filter.JwtFilter;
+import mk.ukim.finki.wp.lab_emt.filter.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
-import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -25,95 +25,78 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class JwtWebSecurityConfig {
-    
-    private final JwtFilter jwtFilter;
 
-    public JwtWebSecurityConfig(JwtFilter jwtFilter) {
-        this.jwtFilter = jwtFilter;
-    }
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
-        corsConfiguration.setAllowedHeaders(List.of("*"));
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfiguration);
-        return source;
-    }
-
-    @Bean
-    public RoleHierarchy roleHierarchy() {
-        RoleHierarchyImpl roleHierarchy = new RoleHierarchyImpl();
-        roleHierarchy.setHierarchy("ROLE_ADMIN > ROLE_USER");
-        return roleHierarchy;
-    }
-
-    @Bean
-    static MethodSecurityExpressionHandler methodSecurityExpressionHandler(RoleHierarchy roleHierarchy) {
-        DefaultMethodSecurityExpressionHandler expressionHandler = new DefaultMethodSecurityExpressionHandler();
-        expressionHandler.setRoleHierarchy(roleHierarchy);
-        return expressionHandler;
+    public JwtWebSecurityConfig(@Lazy JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(corsCustomizer -> corsCustomizer.configurationSource(corsConfigurationSource()))
-                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-                .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 "/swagger-ui/**",
+                                "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/api/user/register",
-                                "/api/user/login",
-                                "/api/accommodations",
-                                "/api/accommodations/{id}",
-                                "/api/hosts",
-                                "/api/hosts/{id}",
-                                "/api/countries",
-                                "/api/countries/{id}"
+                                "/swagger-resources/**"
                         ).permitAll()
-                        
-                        // Authenticated endpoints
-                        .requestMatchers("/api/user/me").authenticated()
-                        
-                        // USER role endpoints (READ операции)
-                        .requestMatchers(
-                                "/api/accommodations",
-                                "/api/accommodations/{id}",
-                                "/api/accommodations/with-host-country",
-                                "/api/accommodations/short",
-                                "/api/accommodations/paged",
-                                "/api/accommodations/most-popular",
-                                "/api/accommodations/most-popular-hosts",
-                                "/api/accommodations/details",
-                                "/api/hosts/{id}/stats",
-                                "/api/accommodation-view",
-                                "/api/accommodation-stats",
-                                "/api/activity-log",
-                                "/api/reservations"
-                        ).hasRole("USER")
-                        
-                        // ADMIN role endpoints (CREATE, UPDATE, DELETE)
-                        .requestMatchers(
-                                "/api/accommodations/add",
-                                "/api/accommodations/{id}/edit",
-                                "/api/accommodations/{id}/rent",
-                                "/api/accommodations/{id}/delete",
-                                "/api/reservations/add",
-                                "/api/reservations/{id}/delete"
-                        ).hasRole("ADMIN")
-                        
-                        // Сите останати бараат ADMIN
-                        .anyRequest().hasRole("ADMIN")
+                        .requestMatchers("/api/user/login", "/api/user/register").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/user", "/api/user/**").authenticated()
+
+                        .requestMatchers(HttpMethod.PUT, "/api/user/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/user/**").hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/accommodations", "/api/accommodations/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/accommodations").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/accommodations/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/accommodations/**").hasRole("ADMIN")
+
+
+                        .requestMatchers(HttpMethod.GET, "/api/hosts", "/api/hosts/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/hosts").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/hosts/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/hosts/**").hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/countries", "/api/countries/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/countries").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/countries/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/countries/**").hasRole("ADMIN")
+
+                        .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-        
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }
